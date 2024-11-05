@@ -1,0 +1,27 @@
+services:
+
+  abs_ma_service:
+    extends:
+      file: capinode.yaml
+      service: abs_capinode
+    init: true
+    command: bash -c '/usr/local/bin/ma-service -i $${MA_SERVICE_INSTANCE_NAME}'
+    healthcheck:
+      test: test -e /tmp/vsomeip/vsomeip-$$(printf %x $${MA_SERVICE_APP_ID})
+      interval: 3s
+      timeout: 1s
+      retries: 3
+      start_period: 10s
+
+  abs_ma_client:
+    extends:
+      file: capinode.yaml
+      service: abs_capinode
+    init: true
+    command: bash -c '/usr/local/bin/ma-client -c $${MA_CLIENT_APP_NAME} -i $${MA_SERVICE_INSTANCE_NAME}'
+    healthcheck:
+      test: test -e /tmp/vsomeip/vsomeip-$$(printf %x $${MA_CLIENT_APP_ID})
+      interval: 3s
+      timeout: 1s
+      retries: 3
+      start_period: 10s

@@ -1,0 +1,17 @@
+services:
+
+  abs_dlt_daemon:
+    extends:
+      file: capinode.yaml
+      service: abs_capinode
+    command: dlt-daemon -c /etc/dlt.conf
+    volumes:
+      - ../dlt.conf:/etc/dlt.conf
+    ports:
+      - 3490
+    healthcheck:
+      test: test -e /tmp/dlt-ctrl/dlt-ctrl.sock
+      interval: 3s
+      timeout: 1s
+      retries: 3
+      start_period: 10s

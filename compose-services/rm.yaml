@@ -1,0 +1,13 @@
+version: '3'
+services:
+  abs_routingmanager:
+    extends:
+      file: capinode.yaml
+      service: abs_capinode
+    entrypoint: /bin/docker-entrypoint.sh
+    healthcheck:
+      test: test -e /tmp/vsomeip/vsomeip-0
+      interval: 3s
+      timeout: 1s
+      retries: 3
+      start_period: 10s

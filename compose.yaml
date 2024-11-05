@@ -1,0 +1,155 @@
+version: 3'
+
+x-a-common-volumes: &a-common-volumes
+  volumes:
+    - vsomeip_uds_a:/tmp/vsomeip
+    - vsomeip_config_a:/etc/vsomeip
+    - dlt_storage_a:/tmp/dlt
+    - ./logs/a:${LOG_DIR:-/tmp/logs}
+  env_file:
+    - path: run_env/capinode_a.env
+      required: true
+
+x-b-common-volumes: &b-common-volumes
+  volumes:
+    - vsomeip_uds_b:/tmp/vsomeip
+    - vsomeip_config_b:/etc/vsomeip
+    - dlt_storage_b:/tmp/dlt
+    - ./logs/b:${LOG_DIR:-/tmp/logs}
+  env_file:
+    - path: run_env/capinode_b.env
+      required: true
+
+services:
+  a_rm:
+    extends:
+      file: compose-services/rm.yaml
+      service: abs_routingmanager
+    <<: *a-common-volumes
+    command:
+      # To use an app as the routingmanager as opposed to the dedicated
+      # routingmanagerd, replace the appropriate lines with::
+      # - cmd:E02Attribute-service
+      # - amf-config-set-routing $${E02ATTRIBUTE_SERVICE_APP_NAME}
+      # - /usr/local/bin/E02Attribute-service \| tee $${LOG_DIR}/e02attr-service.log
+      # If you're switching back and forth, you may need to reset the routing with:
+      # - amf-config-set-routing routingmanagerd
+      - cmd:routingmanagerd # Primary command (special entry-point argument)
+      - amf-init-config
+      - amf-config-add-service $${MA_SERVICE_ID} $${MA_SERVICE_INSTANCE_ID}
+      - amf-config-add-application $${MA_SERVICE_APP_ID} $${MA_SERVICE_APP_NAME}
+      - amf-config-add-service $${E02ATTRIBUTE_SERVICE_ID} $${E02ATTRIBUTE_SERVICE_INSTANCE_ID}
+      - amf-config-add-application $${E02ATTRIBUTE_SERVICE_APP_ID} $${E02ATTRIBUTE_SERVICE_APP_NAME}
+      - amf-config-set-routing routingmanagerd
+      - /usr/local/bin/routingmanagerd \| tee $${LOG_DIR}/rm.log
+
+  b_rm:
+    extends:
+      file: compose-services/rm.yaml
+      service: abs_routingmanager
+    hostname: amf_ping-client
+    <<: *b-common-volumes
+    command:
+      - cmd:routingmanagerd
+      - amf-init-config
+      - amf-config-add-application $${MA_CLIENT_APP_ID} $${MA_CLIENT_APP_NAME}
+      - amf-config-add-application $${E02ATTRIBUTE_CLIENT_APP_ID} $${E02ATTRIBUTE_CLIENT_APP_NAME}
+      # - amf-config-set-routing $${E02ATTRIBUTE_CLIENT_APP_NAME}
+      # - /usr/local/bin/E02Attribute-client \| tee $${LOG_DIR}/e02attr-client.log
+      - amf-config-set-routing routingmanagerd
+      - /usr/local/bin/routingmanagerd | tee $${LOG_DIR}/rm.log
+
+  a_ma_service:
+    extends:
+      file: compose-services/capicxx-example.yaml
+      service: abs_ma_service
+    depends_on:
+      - a_rm
+    <<: *a-common-volumes
+    profiles: [interactive]
+
+  b_ma_client:
+    extends:
+      file: compose-services/capicxx-example.yaml
+      service: abs_ma_client
+    depends_on:
+      - b_rm
+    profiles: [interactive]
+    <<: *b-common-volumes
+
+  a_e02attr_service:
+    extends:
+      file: compose-services/E02Attribute.yaml
+      service: abs_e02attr_service
+    depends_on:
+      - a_rm
+    # profiles: [disabled]
+    <<: *a-common-volumes
+
+  b_e02attr_client:
+    extends:
+      file: compose-services/E02Attribute.yaml
+      service: abs_e02attr_client
+    depends_on:
+      - b_rm
+    # profiles: [disabled]
+    <<: *b-common-volumes
+
+  a_dlt-daemon:
+    extends:
+      file: compose-services/dlt-daemon.yaml
+      service: abs_dlt_daemon
+    <<: *a-common-volumes
+
+  b_dlt-daemon:
+    extends:
+      file: compose-services/dlt-daemon.yaml
+      service: abs_dlt_daemon
+    <<: *b-common-volumes
+
+  # dlt-viewer
+  # To allow X forwarding for this, you must run (on the host): xhost
+  # +local:root
+  dlt-viewer:
+    image: kheaactua/dlt-viewer:2.26.2
+    networks:
+      - amf
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1  # This is often needed for Qt applications
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix  # X11 socket
+      - ${HOME}/.Xauthority:/root/.Xauthority  # X11 authentication file
+      - ./dlt-filters:/workspace/dlt-filters/
+    profiles: [interactive]
+
+networks:
+  amf:
+volumes:
+  vsomeip_uds_a:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=1m,uid=${LOCAL_UID-1001},gid=${LOCAL_GID-1001}
+  vsomeip_config_a:
+  dlt_storage_a:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=1m,uid=${LOCAL_UID-1001},gid=${LOCAL_GID-1001}
+
+  vsomeip_uds_b:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=1m,uid=${LOCAL_UID-1001},gid=${LOCAL_GID-1001}
+  vsomeip_config_b:
+  dlt_storage_b:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=1m,uid=${LOCAL_UID-1001},gid=${LOCAL_GID-1001}

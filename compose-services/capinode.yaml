@@ -1,0 +1,19 @@
+version: '3'
+services:
+  abs_capinode:
+    user: "${LOCAL_UID:-1001}"
+    image: kheaactua/capinode:1
+    init: true
+    environment:
+      - SSH_AUTH_SOCK=/run/host/ssh-auth.sock
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${SSH_AUTH_SOCK}:/run/host/ssh-auth.sock
+
+      # Matt: Bash aliases and stuff.
+      - ${HOME}/dotfiles/rclib.dot:${LOCAL_USERHOME:-/home/${LOCAL_USERNAME:-developer}}/dotfiles/rclib.dot:ro
+      - ${HOME}/dotfiles/stow/bash/.bash_aliases:${LOCAL_USERHOME:-/home/${LOCAL_USERNAME:-developer}}/.bash_aliases:ro
+    networks:
+      - amf
+
+    privileged: false

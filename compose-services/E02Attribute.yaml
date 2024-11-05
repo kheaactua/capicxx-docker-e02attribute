@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+  abs_e02attr_service:
+    extends:
+      file: capinode.yaml
+      service: abs_capinode
+    entrypoint: /bin/docker-entrypoint.sh
+    command:
+      - cmd:E02Attribute-service
+      - /usr/local/bin/E02Attribute-service \| tee $${LOG_DIR}/e02attr-service.log
+    healthcheck:
+      test: test -e /tmp/vsomeip/vsomeip-$$(printf %x $${E02ATTRIBUTE_SERVICE_APP_ID})
+      interval: 3s
+      timeout: 1s
+      retries: 3
+      start_period: 10s
+
+  abs_e02attr_client:
+    extends:
+      file: capinode.yaml
+      service: abs_capinode
+    entrypoint: /bin/docker-entrypoint.sh
+    command:
+      - cmd:E02Attribute-client
+      - /usr/local/bin/E02Attribute-client \| tee $${LOG_DIR}/e02attr-client.log
+    healthcheck:
+      test: test -e /tmp/vsomeip/vsomeip-$$(printf %x $${E02ATTRIBUTE_CLIENT_APP_ID})
+      interval: 3s
+      timeout: 1s
+      retries: 3
+      start_period: 10s
