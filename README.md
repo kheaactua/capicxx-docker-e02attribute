@@ -20,9 +20,9 @@ interface whose name starts with `br-`
 
 To simulate a network issue, use `docker compose execute` to manually modify the link, _i.e._
 ```sh
-docker compose execute a_rm ip set link down eth0
+docker compose execute a_rm sudo ip set link down eth0
 <wait 4-5 seconds>
-docker compose execute a_rm ip set link up eth0
+docker compose execute a_rm sudo ip set link up eth0
 ```
 
 # Config
