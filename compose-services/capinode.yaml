@@ -16,4 +16,8 @@ services:
     networks:
       - amf
 
+    # Adding NET_ADMIN to allow a user to manually modify the network interface, i.e.:
+    # ip link set down dev eth0
     privileged: false
+    cap_add:
+      - NET_ADMIN
